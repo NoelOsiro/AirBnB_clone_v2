@@ -1,147 +1,75 @@
 #!/usr/bin/python3
-"""Test suite for the BaseModel class"""
+"""
+Contains class BaseModel
+"""
 
-from models.base_model import BaseModel
-import unittest
-import datetime
-from uuid import UUID
-import json
-import os
+from datetime import datetime
+import models
+from os import getenv
+import sqlalchemy
+from sqlalchemy import Column, String, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+import uuid
+
+time = "%Y-%m-%dT%H:%M:%S.%f"
+
+if models.storage_t == "db":
+    Base = declarative_base()
+else:
+    Base = object
 
 
-class TestBaseModel(unittest.TestCase):
-    """Test cases for the BaseModel class"""
+class BaseModel:
+    """The BaseModel class from which future classes will be derived"""
+    if models.storage_t == "db":
+        id = Column(String(60), primary_key=True)
+        created_at = Column(DateTime, default=datetime.utcnow)
+        updated_at = Column(DateTime, default=datetime.utcnow)
 
     def __init__(self, *args, **kwargs):
-        """Initialize test class attributes"""
-        super().__init__(*args, **kwargs)
-        self.name = 'BaseModel'
-        self.value = BaseModel
+        """Initialization of the base model"""
+        if kwargs:
+            for key, value in kwargs.items():
+                if key != "__class__":
+                    setattr(self, key, value)
+            if kwargs.get("created_at", None) and type(self.created_at) is str:
+                self.created_at = datetime.strptime(kwargs["created_at"], time)
+            else:
+                self.created_at = datetime.utcnow()
+            if kwargs.get("updated_at", None) and type(self.updated_at) is str:
+                self.updated_at = datetime.strptime(kwargs["updated_at"], time)
+            else:
+                self.updated_at = datetime.utcnow()
+            if kwargs.get("id", None) is None:
+                self.id = str(uuid.uuid4())
+        else:
+            self.id = str(uuid.uuid4())
+            self.created_at = datetime.utcnow()
+            self.updated_at = self.created_at
 
-    def setUp(self):
-        """Set up any necessary resources before running the tests"""
-        pass
+    def __str__(self):
+        """String representation of the BaseModel class"""
+        return "[{:s}] ({:s}) {}".format(self.__class__.__name__, self.id,
+                                         self.__dict__)
 
-    def tearDown(self):
-        """Clean up any resources that were created during testing"""
-        try:
-            os.remove('file.json')
-        except:
-            pass
+    def save(self):
+        """updates the attribute 'updated_at' with the current datetime"""
+        self.updated_at = datetime.utcnow()
+        models.storage.new(self)
+        models.storage.save()
 
-    def test_default(self):
-        """Test creating a default instance of BaseModel"""
-        i = self.value()
-        self.assertEqual(type(i), self.value)
+    def to_dict(self):
+        """returns a dictionary containing all keys/values of the instance"""
+        new_dict = self.__dict__.copy()
+        if "created_at" in new_dict:
+            new_dict["created_at"] = new_dict["created_at"].strftime(time)
+        if "updated_at" in new_dict:
+            new_dict["updated_at"] = new_dict["updated_at"].strftime(time)
+        new_dict["__class__"] = self.__class__.__name__
+        if "_sa_instance_state" in new_dict:
+            del new_dict["_sa_instance_state"]
+        return new_dict
 
-    def test_kwargs(self):
-        """Test creating an instance of BaseModel with kwargs"""
-        i = self.value()
-        copy = i.to_dict()
-        new = BaseModel(**copy)
-        self.assertFalse(new is i)
-
-    def test_kwargs_int(self):
-        """Test creating an instance with invalid kwargs (int)"""
-        i = self.value()
-        copy = i.to_dict()
-        copy.update({1: 2})
-        with self.assertRaises(TypeError):
-            new = BaseModel(**copy)
-
-    def test_save(self):
-        """Test saving an instance of BaseModel"""
-        i = self.value()
-        i.save()
-        key = self.name + "." + i.id
-        with open('file.json', 'r') as f:
-            j = json.load(f)
-            self.assertEqual(j[key], i.to_dict())
-
-    def test_str(self):
-        """Test the __str__ method of BaseModel"""
-        i = self.value()
-        self.assertEqual(str(i), '[{}] ({}) {}'.format(self.name, i.id,
-                         i.__dict__))
-
-    def test_todict(self):
-        """Test the to_dict method of BaseModel"""
-        i = self.value()
-        n = i.to_dict()
-        self.assertEqual(i.to_dict(), n)
-
-    def test_kwargs_none(self):
-        """Test creating an instance with kwargs containing None"""
-        n = {None: None}
-        with self.assertRaises(TypeError):
-            new = self.value(**n)
-
-    def test_kwargs_one(self):
-        """Test creating an instance with kwargs containing a single key"""
-        n = {'Name': 'test'}
-        with self.assertRaises(KeyError):
-            new = self.value(**n)
-
-    def test_id(self):
-        """Test the type of the 'id' attribute"""
-        new = self.value()
-        self.assertEqual(type(new.id), str)
-
-    def test_created_at(self):
-        """Test the type of the 'created_at' attribute"""
-        new = self.value()
-        self.assertEqual(type(new.created_at), datetime.datetime)
-
-    def test_updated_at(self):
-        """Test the type and inequality of 'updated_at' and 'created_at'"""
-        new = self.value()
-        self.assertEqual(type(new.updated_at), datetime.datetime)
-        n = new.to_dict()
-        new = BaseModel(**n)
-        self.assertFalse(new.created_at == new.updated_at)
-
-    def test_equality(self):
-        """Test equality of BaseModel instances"""
-        i1 = self.value()
-        i2 = self.value()
-        self.assertNotEqual(i1, i2)
-
-        i1.some_attribute = "some_value"
-        self.assertNotEqual(i1, i2)
-
-    def test_valid_uuid(self):
-        """Test if the 'id' attribute is a valid UUID"""
-        i = self.value()
-        try:
-            UUID(i.id, version=4)
-        except ValueError:
-            self.fail("Invalid UUID format")
-
-    def test_default_values(self):
-        """Test default values of BaseModel attributes"""
-        i = self.value()
-        self.assertEqual(i.created_at, i.updated_at)
-
-    def test_json_serialization(self):
-        """Test JSON serialization and deserialization of BaseModel"""
-        i1 = self.value()
-        json_str = json.dumps(i1.to_dict())
-        i2 = self.value(**json.loads(json_str))
-        self.assertEqual(i1, i2)
-
-    def test_invalid_date_format(self):
-        """Test __init__ with invalid date format"""
-        invalid_date = {'created_at': 'invalid_date_format'}
-        with self.assertRaises(ValueError):
-            new = self.value(**invalid_date)
-
-    def test_save_without_changes(self):
-        """Test save method without changes"""
-        i = self.value()
-        initial_updated_at = i.updated_at
-        i.save()
-        self.assertEqual(initial_updated_at, i.updated_at)
-
-
-if __name__ == '__main__':
-    unittest.main()
+    def delete(self):
+        """delete the current instance from the storage"""
+        models.storage.delete(self)
