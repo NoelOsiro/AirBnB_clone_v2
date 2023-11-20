@@ -1,44 +1,147 @@
 #!/usr/bin/python3
-"""This module defines a base class for all models in our hbnb clone"""
-import uuid
-from datetime import datetime
+"""Test suite for the BaseModel class"""
+
+from models.base_model import BaseModel
+import unittest
+import datetime
+from uuid import UUID
+import json
+import os
 
 
-class BaseModel:
-    """A base class for all hbnb models"""
+class TestBaseModel(unittest.TestCase):
+    """Test cases for the BaseModel class"""
+
     def __init__(self, *args, **kwargs):
-        """Instatntiates a new model"""
-        if not kwargs:
-            from models import storage
-            self.id = str(uuid.uuid4())
-            self.created_at = datetime.now()
-            self.updated_at = datetime.now()
-            storage.new(self)
-        else:
-            kwargs['updated_at'] = datetime.strptime(kwargs['updated_at'],
-                                                     '%Y-%m-%dT%H:%M:%S.%f')
-            kwargs['created_at'] = datetime.strptime(kwargs['created_at'],
-                                                     '%Y-%m-%dT%H:%M:%S.%f')
-            del kwargs['__class__']
-            self.__dict__.update(kwargs)
+        """Initialize test class attributes"""
+        super().__init__(*args, **kwargs)
+        self.name = 'BaseModel'
+        self.value = BaseModel
 
-    def __str__(self):
-        """Returns a string representation of the instance"""
-        cls = (str(type(self)).split('.')[-1]).split('\'')[0]
-        return '[{}] ({}) {}'.format(cls, self.id, self.__dict__)
+    def setUp(self):
+        """Set up any necessary resources before running the tests"""
+        pass
 
-    def save(self):
-        """Updates updated_at with current time when instance is changed"""
-        from models import storage
-        self.updated_at = datetime.now()
-        storage.save()
+    def tearDown(self):
+        """Clean up any resources that were created during testing"""
+        try:
+            os.remove('file.json')
+        except:
+            pass
 
-    def to_dict(self):
-        """Convert instance into dict format"""
-        dictionary = {}
-        dictionary.update(self.__dict__)
-        dictionary.update({'__class__':
-                          (str(type(self)).split('.')[-1]).split('\'')[0]})
-        dictionary['created_at'] = self.created_at.isoformat()
-        dictionary['updated_at'] = self.updated_at.isoformat()
-        return dictionary
+    def test_default(self):
+        """Test creating a default instance of BaseModel"""
+        i = self.value()
+        self.assertEqual(type(i), self.value)
+
+    def test_kwargs(self):
+        """Test creating an instance of BaseModel with kwargs"""
+        i = self.value()
+        copy = i.to_dict()
+        new = BaseModel(**copy)
+        self.assertFalse(new is i)
+
+    def test_kwargs_int(self):
+        """Test creating an instance with invalid kwargs (int)"""
+        i = self.value()
+        copy = i.to_dict()
+        copy.update({1: 2})
+        with self.assertRaises(TypeError):
+            new = BaseModel(**copy)
+
+    def test_save(self):
+        """Test saving an instance of BaseModel"""
+        i = self.value()
+        i.save()
+        key = self.name + "." + i.id
+        with open('file.json', 'r') as f:
+            j = json.load(f)
+            self.assertEqual(j[key], i.to_dict())
+
+    def test_str(self):
+        """Test the __str__ method of BaseModel"""
+        i = self.value()
+        self.assertEqual(str(i), '[{}] ({}) {}'.format(self.name, i.id,
+                         i.__dict__))
+
+    def test_todict(self):
+        """Test the to_dict method of BaseModel"""
+        i = self.value()
+        n = i.to_dict()
+        self.assertEqual(i.to_dict(), n)
+
+    def test_kwargs_none(self):
+        """Test creating an instance with kwargs containing None"""
+        n = {None: None}
+        with self.assertRaises(TypeError):
+            new = self.value(**n)
+
+    def test_kwargs_one(self):
+        """Test creating an instance with kwargs containing a single key"""
+        n = {'Name': 'test'}
+        with self.assertRaises(KeyError):
+            new = self.value(**n)
+
+    def test_id(self):
+        """Test the type of the 'id' attribute"""
+        new = self.value()
+        self.assertEqual(type(new.id), str)
+
+    def test_created_at(self):
+        """Test the type of the 'created_at' attribute"""
+        new = self.value()
+        self.assertEqual(type(new.created_at), datetime.datetime)
+
+    def test_updated_at(self):
+        """Test the type and inequality of 'updated_at' and 'created_at'"""
+        new = self.value()
+        self.assertEqual(type(new.updated_at), datetime.datetime)
+        n = new.to_dict()
+        new = BaseModel(**n)
+        self.assertFalse(new.created_at == new.updated_at)
+
+    def test_equality(self):
+        """Test equality of BaseModel instances"""
+        i1 = self.value()
+        i2 = self.value()
+        self.assertNotEqual(i1, i2)
+
+        i1.some_attribute = "some_value"
+        self.assertNotEqual(i1, i2)
+
+    def test_valid_uuid(self):
+        """Test if the 'id' attribute is a valid UUID"""
+        i = self.value()
+        try:
+            UUID(i.id, version=4)
+        except ValueError:
+            self.fail("Invalid UUID format")
+
+    def test_default_values(self):
+        """Test default values of BaseModel attributes"""
+        i = self.value()
+        self.assertEqual(i.created_at, i.updated_at)
+
+    def test_json_serialization(self):
+        """Test JSON serialization and deserialization of BaseModel"""
+        i1 = self.value()
+        json_str = json.dumps(i1.to_dict())
+        i2 = self.value(**json.loads(json_str))
+        self.assertEqual(i1, i2)
+
+    def test_invalid_date_format(self):
+        """Test __init__ with invalid date format"""
+        invalid_date = {'created_at': 'invalid_date_format'}
+        with self.assertRaises(ValueError):
+            new = self.value(**invalid_date)
+
+    def test_save_without_changes(self):
+        """Test save method without changes"""
+        i = self.value()
+        initial_updated_at = i.updated_at
+        i.save()
+        self.assertEqual(initial_updated_at, i.updated_at)
+
+
+if __name__ == '__main__':
+    unittest.main()
