@@ -27,7 +27,8 @@ class DBStorage:
         env = os.getenv("HBNB_ENV")
 
         # Set up the connection string
-        connection_str = 'mysql+mysqldb://{}:{}@{}:3306/{}'.format(user, pwd, host, db)
+        connection_str = 'mysql+mysqldb://{}:{}@{}:3306/{}'.format(
+            user, pwd, host, db)
 
         # Create the engine
         self.__engine = create_engine(connection_str, pool_pre_ping=True)
@@ -44,7 +45,8 @@ class DBStorage:
                                                      expire_on_commit=False))
 
     def all(self, cls=None):
-        """Query on the current database session all objects depending on class name"""
+        """Query on the current database
+        session all objects depending on class name"""
         objects_dict = {}
         classes = [User, State, City, Amenity, Place, Review]
 
@@ -75,5 +77,7 @@ class DBStorage:
     def reload(self):
         """Create all tables in the database and create a new session"""
         Base.metadata.create_all(self.__engine)
-        self.__session = scoped_session(sessionmaker(bind=self.__engine,
-                                                     expire_on_commit=False))
+        self.__session = scoped_session(
+            sessionmaker(
+                bind=self.__engine,
+                expire_on_commit=False))
