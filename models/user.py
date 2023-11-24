@@ -17,13 +17,11 @@ class User(BaseModel, Base):
         places = relationship(
             "Place",
             backref="user",
-            cascade="all,
-            delete-orphan")
+            cascade=["all", "delete-orphan"])
         reviews = relationship(
             "Review",
             backref="user",
-            cascade="all,
-            delete-orphan")
+            cascade=["all", "delete-orphan"])
     else:
         email = ""
         password = ""
