@@ -21,7 +21,7 @@ class TestFileStorage(unittest.TestCase):
         """ Remove storage file at the end of tests """
         try:
             os.remove('file.json')
-        except:
+        except FileNotFoundError:
             pass
 
     def test_obj_list_empty(self):
@@ -72,7 +72,6 @@ class TestFileStorage(unittest.TestCase):
             break  # Exit the loop after the first object is loaded
         self.assertIsNotNone(loaded, "No object loaded from storage")
         self.assertEqual(new.to_dict()['id'], loaded.to_dict()['id'])
-
 
     def test_reload_empty(self):
         """ Load from an empty file """
