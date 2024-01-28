@@ -1,64 +1,55 @@
 #!/usr/bin/python3
+"""Flask framework
 """
-    Sript that starts a Flask web application
- """
-from flask import Flask, render_template
+from flask import Flask, url_for, render_template
+
 app = Flask(__name__)
 
 
-@app.route('/', strict_slashes=False)
-def hello_hbn():
-    """
-        function to return Hello HBNB!
+@app.route("/", strict_slashes=False)
+def hello_world():
+    """return hello hbhb
     """
     return "Hello HBNB!"
 
 
-@app.route('/hbnb', strict_slashes=False)
-def hbnb():
-    """
-        function to return HBNB
-    """
+@app.route("/hbnb", strict_slashes=False)
+def HBNB():
+    """return HBNB"""
     return "HBNB"
 
 
 @app.route('/c/<text>', strict_slashes=False)
-def text_var(text):
-    """
-        function to display text variable passed in
-    """
+def text(text):
+    """return text given"""
     return "C {}".format(text.replace("_", " "))
 
 
+@app.route('/python/', defaults={'text': 'is_cool'})
 @app.route('/python/<text>', strict_slashes=False)
-def text_var_python(text="is cool"):
-    """
-        function to display text variable, with default "is cool"
-    """
+def display(text):
+    """display “Python ”, followed by the value of the text"""
     return "Python {}".format(text.replace("_", " "))
 
 
 @app.route('/number/<int:n>', strict_slashes=False)
-def var_num(n):
-        """
-             function to display a variable, but only if an int
-        """
-        return "{} is a number".format(n)
+def num_display(n):
+    """display “n is a number” only"""
+    return "{} is a number".format(n)
 
 
 @app.route('/number_template/<int:n>', strict_slashes=False)
-def var_num_template(n):
-        """
-            function to display number in html page
-        """
-        return render_template("5-number.html", n=n)
+def num_html(n):
+    """display HTML is "n" is a number only"""
+    return render_template('5-number.html', name=n)
 
 
 @app.route('/number_odd_or_even/<int:n>', strict_slashes=False)
-def var_num_even_odd(n):
-        """
-            function to display even or odd number
-        """
-        return render_template("6-number_odd_or_even.html", n=n)
-if __name__ == '__main__':
-        app.run(host='0.0.0.0', port=5000)
+def num_html_even_odd(n):
+    """display HTML is "n" is a number only
+    H1 tag: Number: n is even|odd"""
+    return render_template('6-number_odd_or_even.html', name=n)
+
+
+if __name__ == "__main__":
+    app.run()
